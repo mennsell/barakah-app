@@ -1,10 +1,13 @@
 // Navigasi Antar Tab
 function switchTab(tabId, btnIndex) {
+    // Sembunyikan semua tab
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
+    // Tampilkan tab target
     document.getElementById('tab-' + tabId).classList.add('active');
 
+    // Ubah status tombol aktif di navigasi
     document.querySelectorAll('.nav-btn').forEach((btn, index) => {
         if(index === btnIndex) {
             btn.classList.add('active');
@@ -15,7 +18,7 @@ function switchTab(tabId, btnIndex) {
 }
 
 // ==========================================
-// Fitur AI Advisor (SUDAH AKTIF DENGAN API)
+// Fitur AI Advisor (AKTIF - MENGGUNAKAN API GROQ)
 // ==========================================
 
 function toggleKey() {
@@ -26,9 +29,9 @@ function toggleKey() {
 function saveKey() {
     const key = document.getElementById('key-inp').value.trim();
     if(key) {
-        // Simpan key di memori browser agar tidak hilang saat refresh
+        // Menyimpan Key secara permanen di browser pengguna
         localStorage.setItem('barakah_api_key', key);
-        alert('API Key berhasil disimpan! Sekarang Ustadz AI siap membantu.');
+        alert('API Key berhasil disimpan! AI Advisor sekarang aktif.');
         toggleKey();
         document.getElementById('key-inp').value = '';
     } else {
@@ -55,7 +58,7 @@ async function sendMsg() {
 
     const msgs = document.getElementById('msgs');
     
-    // Render pesan user
+    // Tampilkan pesan User
     msgs.innerHTML += `
         <div class="msg user">
             <div class="bubble">${text}</div>
@@ -64,20 +67,20 @@ async function sendMsg() {
     input.value = '';
     msgs.scrollTop = msgs.scrollHeight;
 
-    // Ambil Key dari Local Storage
+    // Ambil API Key dari memori browser
     const apiKey = localStorage.getItem('barakah_api_key');
     if(!apiKey) {
         msgs.innerHTML += `
             <div class="msg bot">
                 <div class="mav">☽</div>
-                <div class="bubble">⚠️ API Key belum diatur. Silakan klik tombol "Set Key" di atas dan masukkan API Key Groq Anda.</div>
+                <div class="bubble">⚠️ API Key belum diatur. Klik "Set Key" di atas dan masukkan API Key Groq Anda.</div>
             </div>
         `;
         msgs.scrollTop = msgs.scrollHeight;
         return;
     }
 
-    // Tampilkan loading
+    // Tampilkan Indikator Mengetik
     const loadingId = 'load-' + Date.now();
     msgs.innerHTML += `
         <div class="msg bot" id="${loadingId}">
@@ -88,6 +91,7 @@ async function sendMsg() {
     msgs.scrollTop = msgs.scrollHeight;
 
     try {
+        // Menghubungkan ke API Groq
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -95,11 +99,11 @@ async function sendMsg() {
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: 'llama3-8b-8192', // Model Groq yang cepat & gratis
+                model: 'llama3-8b-8192',
                 messages: [
                     {
                         role: 'system', 
-                        content: 'Kamu adalah Ustadz AI, konsultan keuangan syariah. Jawablah pertanyaan seputar zakat, investasi halal, dan hukum Islam dengan ramah, ringkas, dan bijak sesuai prinsip syariah Islam.'
+                        content: 'Kamu adalah Ustadz AI, konsultan keuangan syariah. Jawablah dengan bijak, ramah, dan sesuai prinsip Islam.'
                     },
                     { role: 'user', content: text }
                 ]
@@ -121,7 +125,7 @@ async function sendMsg() {
             msgs.innerHTML += `
                 <div class="msg bot">
                     <div class="mav">☽</div>
-                    <div class="bubble">⚠️ Error: ${data.error.message}</div>
+                    <div class="bubble">⚠️ API Error: ${data.error.message}</div>
                 </div>
             `;
         }
@@ -130,7 +134,7 @@ async function sendMsg() {
         msgs.innerHTML += `
             <div class="msg bot">
                 <div class="mav">☽</div>
-                <div class="bubble">⚠️ Gagal terhubung ke server AI. Periksa koneksi internet Anda.</div>
+                <div class="bubble">⚠️ Gagal terhubung ke server. Pastikan internet lancar.</div>
             </div>
         `;
     }
@@ -138,7 +142,7 @@ async function sendMsg() {
 }
 
 // ==========================================
-// Fitur Kalkulator Zakat (Sama seperti sebelumnya)
+// Fitur Kalkulator Zakat
 // ==========================================
 
 function updateZForm() {
@@ -186,7 +190,7 @@ function hitungZakat() {
         const aset = parseFloat(document.getElementById('z-aset').value) || 0;
         const piu = parseFloat(document.getElementById('z-piu').value) || 0;
         const ud = parseFloat(document.getElementById('z-ud').value) || 0;
-        const hemas = parseFloat(document.getElementById('z-hemas').value) || 1500000;
+        const hemas = 1500000;
         harta = (aset + piu) - ud;
         nisab = 85 * hemas;
         nisabName = '85 gram emas';
@@ -211,7 +215,7 @@ function hitungZakat() {
 }
 
 // ==========================================
-// Fitur Kalkulator Mudharabah / Musyarakah (Sama seperti sebelumnya)
+// Fitur Kalkulator Mudharabah / Musyarakah
 // ==========================================
 
 function updateAkad() {
@@ -247,6 +251,7 @@ function hitungBH() {
         const modalB = parseFloat(document.getElementById('ms-b').value) || 0;
         const profit = parseFloat(document.getElementById('ms-profit').value) || 0;
         const totalModal = modalA + modalB;
+
         if(totalModal > 0) {
             pctA = (modalA / totalModal) * 100;
             pctB = (modalB / totalModal) * 100;
