@@ -1,13 +1,10 @@
 // Navigasi Antar Tab
 function switchTab(tabId, btnIndex) {
-    // Sembunyikan semua tab
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    // Tampilkan tab target
     document.getElementById('tab-' + tabId).classList.add('active');
 
-    // Ubah status tombol aktif di navigasi
     document.querySelectorAll('.nav-btn').forEach((btn, index) => {
         if(index === btnIndex) {
             btn.classList.add('active');
@@ -18,7 +15,7 @@ function switchTab(tabId, btnIndex) {
 }
 
 // ==========================================
-// Fitur AI Advisor (Simulasi)
+// Fitur AI Advisor (SUDAH AKTIF DENGAN API)
 // ==========================================
 
 function toggleKey() {
@@ -27,10 +24,13 @@ function toggleKey() {
 }
 
 function saveKey() {
-    const key = document.getElementById('key-inp').value;
+    const key = document.getElementById('key-inp').value.trim();
     if(key) {
-        alert('API Key berhasil disimpan di sesi ini!');
+        // Simpan key di memori browser agar tidak hilang saat refresh
+        localStorage.setItem('barakah_api_key', key);
+        alert('API Key berhasil disimpan! Sekarang Ustadz AI siap membantu.');
         toggleKey();
+        document.getElementById('key-inp').value = '';
     } else {
         alert('Mohon masukkan API Key terlebih dahulu.');
     }
@@ -42,43 +42,103 @@ function askQ(text) {
 }
 
 function handleKey(event) {
-    // Kirim pesan jika user menekan tombol Enter
     if(event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         sendMsg();
     }
 }
 
-function sendMsg() {
+async function sendMsg() {
     const input = document.getElementById('cinp');
     const text = input.value.trim();
     if(!text) return;
 
     const msgs = document.getElementById('msgs');
     
-    // Render gelembung pesan user
+    // Render pesan user
     msgs.innerHTML += `
         <div class="msg user">
             <div class="bubble">${text}</div>
         </div>
     `;
     input.value = '';
-    msgs.scrollTop = msgs.scrollHeight; // Auto-scroll ke bawah
+    msgs.scrollTop = msgs.scrollHeight;
 
-    // Simulasi respons bot (AI) dengan jeda 1 detik
-    setTimeout(() => {
+    // Ambil Key dari Local Storage
+    const apiKey = localStorage.getItem('barakah_api_key');
+    if(!apiKey) {
         msgs.innerHTML += `
             <div class="msg bot">
                 <div class="mav">☽</div>
-                <div class="bubble">Ini adalah simulasi respon AI. Untuk jawaban sesungguhnya, aplikasikan integrasi endpoint API Azure OpenAI atau model LLM lain di sisi backend.</div>
+                <div class="bubble">⚠️ API Key belum diatur. Silakan klik tombol "Set Key" di atas dan masukkan API Key Groq Anda.</div>
             </div>
         `;
         msgs.scrollTop = msgs.scrollHeight;
-    }, 1000);
+        return;
+    }
+
+    // Tampilkan loading
+    const loadingId = 'load-' + Date.now();
+    msgs.innerHTML += `
+        <div class="msg bot" id="${loadingId}">
+            <div class="mav">☽</div>
+            <div class="bubble"><i>Ustadz AI sedang mengetik... ⏳</i></div>
+        </div>
+    `;
+    msgs.scrollTop = msgs.scrollHeight;
+
+    try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'llama3-8b-8192', // Model Groq yang cepat & gratis
+                messages: [
+                    {
+                        role: 'system', 
+                        content: 'Kamu adalah Ustadz AI, konsultan keuangan syariah. Jawablah pertanyaan seputar zakat, investasi halal, dan hukum Islam dengan ramah, ringkas, dan bijak sesuai prinsip syariah Islam.'
+                    },
+                    { role: 'user', content: text }
+                ]
+            })
+        });
+
+        const data = await response.json();
+        document.getElementById(loadingId).remove();
+
+        if(response.ok) {
+            const aiReply = data.choices[0].message.content.replace(/\n/g, '<br>');
+            msgs.innerHTML += `
+                <div class="msg bot">
+                    <div class="mav">☽</div>
+                    <div class="bubble">${aiReply}</div>
+                </div>
+            `;
+        } else {
+            msgs.innerHTML += `
+                <div class="msg bot">
+                    <div class="mav">☽</div>
+                    <div class="bubble">⚠️ Error: ${data.error.message}</div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+        msgs.innerHTML += `
+            <div class="msg bot">
+                <div class="mav">☽</div>
+                <div class="bubble">⚠️ Gagal terhubung ke server AI. Periksa koneksi internet Anda.</div>
+            </div>
+        `;
+    }
+    msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ==========================================
-// Fitur Kalkulator Zakat
+// Fitur Kalkulator Zakat (Sama seperti sebelumnya)
 // ==========================================
 
 function updateZForm() {
@@ -126,17 +186,16 @@ function hitungZakat() {
         const aset = parseFloat(document.getElementById('z-aset').value) || 0;
         const piu = parseFloat(document.getElementById('z-piu').value) || 0;
         const ud = parseFloat(document.getElementById('z-ud').value) || 0;
-        const hemas = 1500000; // Asumsi harga emas default untuk perniagaan
+        const hemas = parseFloat(document.getElementById('z-hemas').value) || 1500000;
         harta = (aset + piu) - ud;
         nisab = 85 * hemas;
         nisabName = '85 gram emas';
     }
 
     const isWajib = harta >= nisab;
-    const zakat = isWajib ? harta * 0.025 : 0; // Tarif 2.5%
+    const zakat = isWajib ? harta * 0.025 : 0;
     const persentase = nisab > 0 ? Math.min((harta / nisab) * 100, 100) : 0;
 
-    // Render Hasil ke UI
     document.getElementById('zrows').innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom: 8px;"><span>Total Harta Bersih:</span> <strong>${formatRp(harta)}</strong></div>
         <div style="display:flex; justify-content:space-between; margin-bottom: 8px;"><span>Batas Nisab (${nisabName}):</span> <strong>${formatRp(nisab)}</strong></div>
@@ -152,7 +211,7 @@ function hitungZakat() {
 }
 
 // ==========================================
-// Fitur Kalkulator Mudharabah / Musyarakah
+// Fitur Kalkulator Mudharabah / Musyarakah (Sama seperti sebelumnya)
 // ==========================================
 
 function updateAkad() {
@@ -173,12 +232,7 @@ function syncN(source) {
 
 function hitungBH() {
     const akad = document.getElementById('akad').value;
-    let porsiA = 0;
-    let porsiB = 0;
-    let lblA = '';
-    let lblB = '';
-    let pctA = 0;
-    let pctB = 0;
+    let porsiA = 0, porsiB = 0, lblA = '', lblB = '', pctA = 0, pctB = 0;
 
     if(akad === 'mudharabah') {
         const profit = parseFloat(document.getElementById('m-profit').value) || 0;
@@ -193,7 +247,6 @@ function hitungBH() {
         const modalB = parseFloat(document.getElementById('ms-b').value) || 0;
         const profit = parseFloat(document.getElementById('ms-profit').value) || 0;
         const totalModal = modalA + modalB;
-
         if(totalModal > 0) {
             pctA = (modalA / totalModal) * 100;
             pctB = (modalB / totalModal) * 100;
@@ -204,20 +257,16 @@ function hitungBH() {
         lblB = 'Pihak B';
     }
 
-    // Update UI Visualisasi
     document.getElementById('lbl-a').innerText = lblA + ` (${pctA.toFixed(0)}%)`;
     document.getElementById('lbl-b').innerText = lblB + ` (${pctB.toFixed(0)}%)`;
     document.getElementById('sub-a').innerText = `Bagian ${lblA}`;
     document.getElementById('sub-b').innerText = `Bagian ${lblB}`;
-
     document.getElementById('bar-a').style.width = pctA + '%';
     document.getElementById('bar-b').style.width = pctB + '%';
-
     document.getElementById('pa').innerText = formatRp(porsiA);
     document.getElementById('pb').innerText = formatRp(porsiB);
 }
 
-// Inisialisasi otomatis untuk memastikan UI state sinkron dengan pilihan form
 window.onload = () => {
     updateZForm();
     updateAkad();
