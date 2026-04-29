@@ -18,7 +18,7 @@ function switchTab(tabId, btnIndex) {
 }
 
 // ==========================================
-// Fitur AI Advisor (AKTIF - MENGGUNAKAN API GROQ)
+// Fitur AI Advisor (AKTIF - GROQ API UPDATED)
 // ==========================================
 
 function toggleKey() {
@@ -29,7 +29,6 @@ function toggleKey() {
 function saveKey() {
     const key = document.getElementById('key-inp').value.trim();
     if(key) {
-        // Menyimpan Key secara permanen di browser pengguna
         localStorage.setItem('barakah_api_key', key);
         alert('API Key berhasil disimpan! AI Advisor sekarang aktif.');
         toggleKey();
@@ -58,7 +57,6 @@ async function sendMsg() {
 
     const msgs = document.getElementById('msgs');
     
-    // Tampilkan pesan User
     msgs.innerHTML += `
         <div class="msg user">
             <div class="bubble">${text}</div>
@@ -67,7 +65,6 @@ async function sendMsg() {
     input.value = '';
     msgs.scrollTop = msgs.scrollHeight;
 
-    // Ambil API Key dari memori browser
     const apiKey = localStorage.getItem('barakah_api_key');
     if(!apiKey) {
         msgs.innerHTML += `
@@ -80,7 +77,6 @@ async function sendMsg() {
         return;
     }
 
-    // Tampilkan Indikator Mengetik
     const loadingId = 'load-' + Date.now();
     msgs.innerHTML += `
         <div class="msg bot" id="${loadingId}">
@@ -91,7 +87,6 @@ async function sendMsg() {
     msgs.scrollTop = msgs.scrollHeight;
 
     try {
-        // Menghubungkan ke API Groq
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -99,7 +94,7 @@ async function sendMsg() {
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: 'llama3-8b-8192',
+                model: 'llama-3.3-70b-versatile', // MODEL TERBARU (Menggantikan model lama yang decommissioned)
                 messages: [
                     {
                         role: 'system', 
@@ -111,7 +106,7 @@ async function sendMsg() {
         });
 
         const data = await response.json();
-        document.getElementById(loadingId).remove();
+        if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
 
         if(response.ok) {
             const aiReply = data.choices[0].message.content.replace(/\n/g, '<br>');
